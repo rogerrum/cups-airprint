@@ -33,7 +33,7 @@ COPY airprint/ /opt/airprint/
 COPY healthcheck.sh /
 COPY start-cups.sh /root/
 RUN chmod +x /healthcheck.sh /root/start-cups.sh
-HEALTHCHECK --interval=10s --timeout=3s CMD /healthcheck.sh
+#HEALTHCHECK --interval=10s --timeout=3s CMD /healthcheck.sh
 
 ENV TZ="GMT" \
     CUPS_ADMIN_USER="admin" \
