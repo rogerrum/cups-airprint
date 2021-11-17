@@ -5,8 +5,8 @@ set -e
 [ "yes" = "${CUPS_ENV_DEBUG}" ] && set -x
 
 ### variable defaults
-#CUPS_IP=${CUPS_IP:-$(hostname -i)}
-#CUPS_HOSTNAME=${CUPS_HOSTNAME:-$(hostname -f)}
+CUPS_IP=${CUPS_IP:-$(hostname -i)}
+CUPS_HOSTNAME=${CUPS_HOSTNAME:-$(hostname -f)}
 CUPS_ADMIN_USER=${CUPS_ADMIN_USER:-"admin"}
 CUPS_ADMIN_PASSWORD=${CUPS_ADMIN_PASSWORD:-"secr3t"}
 CUPS_WEBINTERFACE=${CUPS_WEBINTERFACE:-"yes"}
@@ -14,8 +14,8 @@ CUPS_SHARE_PRINTERS=${CUPS_SHARE_PRINTERS:-"yes"}
 CUPS_REMOTE_ADMIN=${CUPS_REMOTE_ADMIN:-"yes"}
 CUPS_ACCESS_LOGLEVEL=${CUPS_ACCESS_LOGLEVEL:-"config"}
 CUPS_LOGLEVEL=${CUPS_LOGLEVEL:-"warn"}
-#CUPS_SSL_CERT=${CUPS_SSL_CERT:-""}
-#CUPS_SSL_KEY=${CUPS_SSL_KEY:-""}
+CUPS_SSL_CERT=${CUPS_SSL_CERT:-""}
+CUPS_SSL_KEY=${CUPS_SSL_KEY:-""}
 AVAHI_INTERFACES=${AVAHI_INTERFACES:=""}
 AVAHI_IPV6=${AVAHI_IPV6:="no"}
 AVAHI_REFLECTOR=${AVAHI_REFLECTOR:="no"}
@@ -39,22 +39,26 @@ sed -i 's/^.*AccessLog .*/AccessLog stderr/' /etc/cups/cups-files.conf
 sed -i 's/^.*ErrorLog .*/ErrorLog stderr/' /etc/cups/cups-files.conf
 sed -i 's/^.*PageLog .*/PageLog stderr/' /etc/cups/cups-files.conf
 
-#if [ "yes" = "${CUPS_REMOTE_ADMIN}" ]; then
-#  [ -z "$(grep "^Listen localhost:631" /etc/cups/cupsd.conf)" ] &&
-#    echo "Listen \*:631" >> /etc/cups/cupsd.conf ||
-#    sed -i 's/Listen localhost:631/Listen \*:631/' /etc/cups/cupsd.conf
-#fi
+if [ "yes" = "${CUPS_REMOTE_ADMIN}" ]; then
+  sed -i 's/Listen localhost:631/Listen 0.0.0.0:631/' /etc/cups/cupsd.conf && \
+	sed -i 's/Browsing Off/Browsing On/' /etc/cups/cupsd.conf && \
+	sed -i 's/<Location \/>/<Location \/>\n  Allow All/' /etc/cups/cupsd.conf && \
+	sed -i 's/<Location \/admin>/<Location \/admin>\n  Allow All\n  Require user @SYSTEM/' /etc/cups/cupsd.conf && \
+	sed -i 's/<Location \/admin\/conf>/<Location \/admin\/conf>\n  Allow All/' /etc/cups/cupsd.conf && \
+	echo "ServerAlias *" >> /etc/cups/cupsd.conf && \
+	echo "DefaultEncryption Never" >> /etc/cups/cupsd.conf
+fi
 
 # own SSL cert:
 # CreateSelfSignedCerts no
 # host.name.crt & host.name.key -> /etc/cups/ssl/
-#if [ -n "${CUPS_SSL_CERT}" -a -n "${CUPS_SSL_KEY}" ]; then
-#  [ -z "$(grep CreateSelfSignedCerts /etc/cups/cups-files.conf)" ] &&
-#    echo "CreateSelfSignedCerts no" >> /etc/cups/cups-files.conf ||
-#    sed -i 's/^.*CreateSelfSignedCerts.*/CreateSelfSignedCerts no/' /etc/cups/cups-files.conf
-#  echo -e "${CUPS_SSL_CERT}" > /etc/cups/ssl/${CUPS_HOSTNAME}.crt
-#  echo -e "${CUPS_SSL_KEY}" > /etc/cups/ssl/${CUPS_HOSTNAME}.key
-#fi
+if [ -n "${CUPS_SSL_CERT}" -a -n "${CUPS_SSL_KEY}" ]; then
+  [ -z "$(grep CreateSelfSignedCerts /etc/cups/cups-files.conf)" ] &&
+    echo "CreateSelfSignedCerts no" >> /etc/cups/cups-files.conf ||
+    sed -i 's/^.*CreateSelfSignedCerts.*/CreateSelfSignedCerts no/' /etc/cups/cups-files.conf
+  echo -e "${CUPS_SSL_CERT}" > /etc/cups/ssl/${CUPS_HOSTNAME}.crt
+  echo -e "${CUPS_SSL_KEY}" > /etc/cups/ssl/${CUPS_HOSTNAME}.key
+fi
 
 # smbspool fix for smb auth bug: https://bugzilla.redhat.com/show_bug.cgi?id=1700791
 mv /usr/bin/smbspool /usr/bin/smbspool.orig
@@ -106,7 +110,7 @@ cat <<EOF
 ===========================================================
 The dockerized CUPS instance is now ready for use! The web
 interface is available here:
-#URL:       http://${CUPS_IP}:631/ or http://${CUPS_HOSTNAME}:631/
+URL:       http://${CUPS_IP}:631/ or http://${CUPS_HOSTNAME}:631/
 Username:  ${CUPS_ADMIN_USER}
 Password:  ${CUPS_ADMIN_PASSWORD}
 
