@@ -59,7 +59,6 @@ then
 #  platforms=($(get_available_architectures "$base_image" "$base_tag"))
   platforms=(
     linux/amd64
-    linux/arm64/v8
   )
 
   BUILD_TYPE=manual
