@@ -23,9 +23,12 @@ RUN apt-get -y install \
     && rm -rf /tmp/* \
     && rm -rf /var/tmp/*
 
+COPY brother /tmp
+RUN dpkg -i --force-all /tmp/hl*.deb
+RUN dpkg -i --force-all /tmp/cupswrapper*.deb
+RUN rm /tmp/*.deb
 
 COPY airprint/ /opt/airprint/
-
 
 COPY healthcheck.sh /
 COPY start-cups.sh /root/
@@ -39,22 +42,12 @@ ENV TZ="GMT" \
     CUPS_SHARE_PRINTERS="yes" \
     CUPS_REMOTE_ADMIN="yes" \
     CUPS_ENV_DEBUG="yes" \
-    # defaults to $(hostname -i)
-#    CUPS_IP="" \
+    CUPS_IP="" \
     CUPS_ACCESS_LOGLEVEL="config" \
-    # example: lpadmin -p Epson-RX520 -D 'my RX520' -m 'gutenprint.5.3://escp2-rx620/expert' -v smb://user:pass@host/Epson-RX520"
+    # example: lpadmin -p Air-Brother-HL-2270DW -D 'Airprinter Brother-HL-2270DW' -m 'HL2270DW.ppd' -o PageSize=A4 -v lpd://<ip>/BINARY_P1"
     CUPS_LPADMIN_PRINTER1=""
 
 # This will use port 631
 EXPOSE 631
-
-# Baked-in config file changes
-RUN sed -i 's/Listen localhost:631/Listen 0.0.0.0:631/' /etc/cups/cupsd.conf && \
-	sed -i 's/Browsing Off/Browsing On/' /etc/cups/cupsd.conf && \
-	sed -i 's/<Location \/>/<Location \/>\n  Allow All/' /etc/cups/cupsd.conf && \
-	sed -i 's/<Location \/admin>/<Location \/admin>\n  Allow All\n  Require user @SYSTEM/' /etc/cups/cupsd.conf && \
-	sed -i 's/<Location \/admin\/conf>/<Location \/admin\/conf>\n  Allow All/' /etc/cups/cupsd.conf && \
-	echo "ServerAlias *" >> /etc/cups/cupsd.conf && \
-	echo "DefaultEncryption Never" >> /etc/cups/cupsd.conf
 
 ENTRYPOINT ["/root/start-cups.sh"]
